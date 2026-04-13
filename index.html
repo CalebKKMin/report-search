@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>수시보고서 리스트 검색 시스템</title>
+  <title>수시보고서-연구용역 리스트 검색 시스템</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -20,25 +20,62 @@
       text-align: center;
       box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }
-    header h1 {
-      font-size: 1.7rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-    header p {
-      margin-top: 6px;
-      font-size: 0.88rem;
-      opacity: 0.82;
-    }
+    header h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.5px; }
+    header p { margin-top: 6px; font-size: 0.88rem; opacity: 0.82; }
 
-    .search-panel {
+    /* ── 탭 ── */
+    .tab-bar {
       max-width: 1000px;
       margin: 28px auto 0;
+      display: flex;
+      gap: 0;
+      border-radius: 12px 12px 0 0;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 16px 0;
+      border: none;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      letter-spacing: -0.3px;
+    }
+    .tab-btn.report {
+      background: #e8f0fb;
+      color: #2563a8;
+      border-bottom: 3px solid transparent;
+    }
+    .tab-btn.research {
+      background: #e8f5ee;
+      color: #15803d;
+      border-bottom: 3px solid transparent;
+    }
+    .tab-btn.report.active {
       background: white;
-      border-radius: 12px;
+      color: #1a3a5c;
+      border-bottom: 3px solid #2563a8;
+    }
+    .tab-btn.research.active {
+      background: white;
+      color: #15803d;
+      border-bottom: 3px solid #15803d;
+    }
+
+    /* ── 공통 패널 ── */
+    .search-panel {
+      max-width: 1000px;
+      margin: 0 auto 0;
+      background: white;
       box-shadow: 0 2px 12px rgba(0,0,0,0.09);
       padding: 24px 28px;
     }
+
+    .section { display: none; }
+    .section.active { display: block; }
 
     .filter-row {
       display: flex;
@@ -46,7 +83,6 @@
       flex-wrap: wrap;
       align-items: flex-end;
     }
-
     .filter-group {
       display: flex;
       flex-direction: column;
@@ -71,161 +107,22 @@
       outline: none;
     }
     .filter-group select:focus,
-    .filter-group input:focus {
-      border-color: #2563a8;
-      background: white;
-    }
-
+    .filter-group input:focus { border-color: #2563a8; background: white; }
     .filter-group.keyword { flex: 1; min-width: 220px; }
     .filter-group.keyword input { width: 100%; }
 
-    .btn-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 14px;
-      align-items: center;
-    }
-    button {
-      padding: 10px 22px;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.93rem;
-      font-family: inherit;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-    }
+    .btn-row { display: flex; gap: 10px; margin-top: 14px; align-items: center; }
+    button { padding: 10px 22px; border: none; border-radius: 8px; font-size: 0.93rem; font-family: inherit; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; }
     button:active { transform: scale(0.97); }
-    .btn-search {
-      background: #2563a8;
-      color: white;
-    }
+    .btn-search { background: #2563a8; color: white; }
     .btn-search:hover { background: #1a4a8a; }
-    .btn-reset {
-      background: #e2e8f0;
-      color: #4a5568;
-    }
+    .btn-search.green { background: #15803d; }
+    .btn-search.green:hover { background: #166534; }
+    .btn-reset { background: #e2e8f0; color: #4a5568; }
     .btn-reset:hover { background: #cbd5e0; }
 
-    .result-meta {
-      max-width: 1000px;
-      margin: 16px auto 8px;
-      padding: 0 4px;
-      font-size: 0.88rem;
-      color: #718096;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .result-meta strong { color: #2d3748; }
-
-    .table-wrap {
-      max-width: 1000px;
-      margin: 0 auto 40px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.09);
-      overflow: hidden;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-    }
-    thead tr {
-      background: #1a3a5c;
-      color: white;
-    }
-    thead th {
-      padding: 13px 16px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 0.85rem;
-      letter-spacing: 0.3px;
-      white-space: nowrap;
-    }
-    thead th:nth-child(1) { width: 70px; text-align: center; }
-    thead th:nth-child(2) { width: 70px; text-align: center; }
-    thead th:nth-child(3) { width: 80px; text-align: center; }
-    thead th:nth-child(4) { }
-
-    tbody tr {
-      border-bottom: 1px solid #edf2f7;
-      transition: background 0.15s;
-    }
-    tbody tr:hover { background: #ebf4ff; }
-    tbody tr:last-child { border-bottom: none; }
-
-    td {
-      padding: 11px 16px;
-      color: #2d3748;
-      vertical-align: middle;
-    }
-    td:nth-child(1) { text-align: center; color: #718096; font-size: 0.82rem; }
-    td:nth-child(2) { text-align: center; font-weight: 600; color: #2563a8; }
-    td:nth-child(3) { text-align: center; }
-    td:nth-child(4) { word-break: break-all; line-height: 1.5; }
-
-    .badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 0.78rem;
-      font-weight: 700;
-    }
-    .badge-국가 { background: #dbeafe; color: #1d4ed8; }
-    .badge-산업 { background: #dcfce7; color: #15803d; }
-    .badge-기타 { background: #fef9c3; color: #854d0e; }
-
-    .highlight {
-      background: #fef08a;
-      border-radius: 2px;
-      font-weight: 600;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #a0aec0;
-    }
-    .empty-state svg {
-      width: 56px;
-      height: 56px;
-      margin-bottom: 16px;
-      opacity: 0.4;
-    }
-    .empty-state p { font-size: 1rem; }
-
-    .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 6px;
-      padding: 16px;
-      border-top: 1px solid #edf2f7;
-    }
-    .page-btn {
-      padding: 6px 12px;
-      border: 1.5px solid #cbd5e0;
-      border-radius: 6px;
-      background: white;
-      color: #4a5568;
-      font-size: 0.85rem;
-      cursor: pointer;
-      font-family: inherit;
-      transition: all 0.15s;
-    }
-    .page-btn:hover { border-color: #2563a8; color: #2563a8; }
-    .page-btn.active { background: #2563a8; border-color: #2563a8; color: white; font-weight: 700; }
-    .page-btn:disabled { opacity: 0.4; cursor: default; }
-
-    .year-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 4px;
-    }
+    /* ── 연도 칩 ── */
+    .year-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
     .year-chip {
       padding: 5px 14px;
       border-radius: 20px;
@@ -242,271 +139,442 @@
     .year-chip.active { background: #2563a8; border-color: #2563a8; color: white; font-weight: 700; }
     .year-chip.all { background: #f0f4f8; }
     .year-chip.all.active { background: #e2e8f0; border-color: #94a3b8; color: #1a202c; }
+    /* 연구용역 탭 칩 색상 */
+    .green-chip:hover { border-color: #15803d; color: #15803d; }
+    .green-chip.active { background: #15803d; border-color: #15803d; color: white; }
+    .green-chip.all.active { background: #e2e8f0; border-color: #94a3b8; color: #1a202c; }
+
+    /* ── 결과 메타 ── */
+    .result-meta {
+      max-width: 1000px;
+      margin: 16px auto 8px;
+      padding: 0 4px;
+      font-size: 0.88rem;
+      color: #718096;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .result-meta strong { color: #2d3748; }
+
+    /* ── 테이블 ── */
+    .table-wrap {
+      max-width: 1000px;
+      margin: 0 auto 40px;
+      background: white;
+      border-radius: 0 0 12px 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    thead tr { background: #1a3a5c; color: white; }
+    thead.green-head tr { background: #166534; }
+    thead th { padding: 13px 16px; text-align: left; font-weight: 600; font-size: 0.85rem; letter-spacing: 0.3px; white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid #edf2f7; transition: background 0.15s; }
+    tbody tr:hover { background: #ebf4ff; }
+    tbody tr:last-child { border-bottom: none; }
+    td { padding: 11px 16px; color: #2d3748; vertical-align: middle; }
+
+    /* 수시보고서 열 너비 */
+    #reportTable thead th:nth-child(1),
+    #reportTable td:nth-child(1) { width: 60px; text-align: center; color: #718096; font-size: 0.82rem; }
+    #reportTable thead th:nth-child(2),
+    #reportTable td:nth-child(2) { width: 70px; text-align: center; font-weight: 600; color: #2563a8; }
+    #reportTable thead th:nth-child(3),
+    #reportTable td:nth-child(3) { width: 80px; text-align: center; }
+
+    /* 연구용역 열 너비 */
+    #researchTable thead th:nth-child(1),
+    #researchTable td:nth-child(1) { width: 60px; text-align: center; color: #718096; font-size: 0.82rem; }
+    #researchTable thead th:nth-child(2),
+    #researchTable td:nth-child(2) { width: 80px; text-align: center; font-weight: 600; color: #15803d; }
+    #researchTable thead th:nth-child(3),
+    #researchTable td:nth-child(3) { width: 160px; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; }
+    .badge-국가 { background: #dbeafe; color: #1d4ed8; }
+    .badge-산업 { background: #dcfce7; color: #15803d; }
+    .badge-기타 { background: #fef9c3; color: #854d0e; }
+
+    .highlight { background: #fef08a; border-radius: 2px; font-weight: 600; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #a0aec0; }
+    .empty-state p { font-size: 1rem; }
+
+    /* ── 페이지네이션 ── */
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 16px; border-top: 1px solid #edf2f7; }
+    .page-btn { padding: 6px 12px; border: 1.5px solid #cbd5e0; border-radius: 6px; background: white; color: #4a5568; font-size: 0.85rem; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+    .page-btn:hover { border-color: #2563a8; color: #2563a8; }
+    .page-btn.active { background: #2563a8; border-color: #2563a8; color: white; font-weight: 700; }
+    .page-btn:disabled { opacity: 0.4; cursor: default; }
 
     @media (max-width: 640px) {
-      header h1 { font-size: 1.25rem; }
-      .search-panel { margin: 14px 10px 0; padding: 16px; }
+      header h1 { font-size: 1.2rem; }
+      .search-panel { padding: 16px; }
       .filter-row { flex-direction: column; }
-      thead th:nth-child(1), td:nth-child(1) { display: none; }
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>수시보고서 리스트 검색 시스템</h1>
-  <p>2019~2026년 수시보고서 통합 검색</p>
+  <h1>수시보고서-연구용역 리스트 검색 시스템</h1>
+  <p>수시보고서(2019~2026) 및 연구용역 통합 검색</p>
 </header>
 
+<!-- 탭 -->
+<div class="tab-bar">
+  <button class="tab-btn report active" onclick="switchTab('report')">📄 수시보고서</button>
+  <button class="tab-btn research" onclick="switchTab('research')">🔬 연구용역</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     수시보고서 섹션
+══════════════════════════════════════ -->
 <div class="search-panel">
-  <!-- 연도 칩 -->
-  <div style="margin-bottom:16px;">
-    <div style="font-size:0.8rem;font-weight:600;color:#4a5568;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">연도</div>
-    <div class="year-chips" id="yearChips"></div>
+  <div class="section active" id="reportSection">
+    <div style="margin-bottom:16px;">
+      <div style="font-size:0.8rem;font-weight:600;color:#4a5568;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">연도</div>
+      <div class="year-chips" id="reportYearChips"></div>
+    </div>
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>분류</label>
+        <select id="reportCategory">
+          <option value="">전체</option>
+          <option value="국가">국가</option>
+          <option value="산업">산업</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="filter-group keyword">
+        <label>파일명 검색 (일부 단어 입력)</label>
+        <input type="text" id="reportKeyword" placeholder="예: FDI, 미중, 반도체, 투자..." autocomplete="off" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-search" onclick="searchReport()">검색</button>
+      <button class="btn-reset" onclick="resetReport()">초기화</button>
+    </div>
   </div>
 
-  <div class="filter-row">
-    <!-- 분류 -->
-    <div class="filter-group">
-      <label>분류</label>
-      <select id="categoryFilter">
-        <option value="">전체</option>
-        <option value="국가">국가</option>
-        <option value="산업">산업</option>
-        <option value="기타">기타</option>
-      </select>
+  <!-- ══════════════════════════════════════
+       연구용역 섹션
+  ══════════════════════════════════════ -->
+  <div class="section" id="researchSection">
+    <div style="margin-bottom:16px;">
+      <div style="font-size:0.8rem;font-weight:600;color:#4a5568;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">연도</div>
+      <div class="year-chips" id="researchYearChips"></div>
     </div>
-
-    <!-- 키워드 검색 -->
-    <div class="filter-group keyword">
-      <label>파일명 검색 (일부 단어 입력)</label>
-      <input type="text" id="keywordInput" placeholder="예: FDI, 미중, 반도체, 투자..." autocomplete="off" />
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>발주처</label>
+        <select id="researchClient">
+          <option value="">전체</option>
+        </select>
+      </div>
+      <div class="filter-group keyword">
+        <label>연구용역명 검색 (일부 단어 입력)</label>
+        <input type="text" id="researchKeyword" placeholder="예: FDI, 외투, 투자유치..." autocomplete="off" />
+      </div>
     </div>
-  </div>
-
-  <div class="btn-row">
-    <button class="btn-search" onclick="doSearch()">검색</button>
-    <button class="btn-reset" onclick="doReset()">초기화</button>
-    <span id="searchHint" style="font-size:0.82rem;color:#718096;margin-left:4px;"></span>
+    <div class="btn-row">
+      <button class="btn-search green" onclick="searchResearch()">검색</button>
+      <button class="btn-reset" onclick="resetResearch()">초기화</button>
+    </div>
   </div>
 </div>
 
+<!-- 결과 메타 -->
 <div class="result-meta" id="resultMeta" style="display:none;"></div>
 
-<div class="table-wrap" id="tableWrap" style="display:none;">
-  <table>
+<!-- 수시보고서 테이블 -->
+<div class="table-wrap" id="reportTableWrap" style="display:none;">
+  <table id="reportTable">
     <thead>
-      <tr>
-        <th>#</th>
-        <th>연도</th>
-        <th>분류</th>
-        <th>파일명</th>
-      </tr>
+      <tr><th>#</th><th>연도</th><th>분류</th><th>파일명</th></tr>
     </thead>
-    <tbody id="tableBody"></tbody>
+    <tbody id="reportBody"></tbody>
   </table>
-  <div class="pagination" id="pagination"></div>
+  <div class="pagination" id="reportPagination"></div>
+</div>
+
+<!-- 연구용역 테이블 -->
+<div class="table-wrap" id="researchTableWrap" style="display:none;">
+  <table id="researchTable">
+    <thead class="green-head">
+      <tr><th>#</th><th>연도</th><th>발주처</th><th>연구용역명</th></tr>
+    </thead>
+    <tbody id="researchBody"></tbody>
+  </table>
+  <div class="pagination" id="researchPagination"></div>
 </div>
 
 <script>
-  let allData = [];
-  let filtered = [];
-  let selectedYears = new Set();
+  /* ═══════════════════════════════════════
+     공통 유틸
+  ═══════════════════════════════════════ */
   const PAGE_SIZE = 30;
-  let currentPage = 1;
 
-  // 데이터 로드
-  fetch('data/reports.json')
-    .then(r => r.json())
-    .then(data => {
-      allData = data;
-      initYearChips();
-      doSearch();
-    })
-    .catch(err => {
-      document.getElementById('tableWrap').style.display = '';
-      document.getElementById('tableBody').innerHTML =
-        '<tr><td colspan="4" style="text-align:center;padding:40px;color:#e53e3e;">데이터를 불러오지 못했습니다: ' + err.message + '</td></tr>';
-    });
-
-  function initYearChips() {
-    const years = [...new Set(allData.map(d => d.year))].sort();
-    const container = document.getElementById('yearChips');
-    // 전체 칩
-    const all = document.createElement('button');
-    all.className = 'year-chip all active';
-    all.textContent = '전체';
-    all.dataset.year = '';
-    all.onclick = () => {
-      selectedYears.clear();
-      document.querySelectorAll('.year-chip').forEach(c => c.classList.remove('active'));
-      all.classList.add('active');
-      doSearch();
-    };
-    container.appendChild(all);
-
-    years.forEach(y => {
-      const btn = document.createElement('button');
-      btn.className = 'year-chip';
-      btn.textContent = y + '년';
-      btn.dataset.year = y;
-      btn.onclick = () => toggleYear(y, btn);
-      container.appendChild(btn);
-    });
-  }
-
-  function toggleYear(year, btn) {
-    const allChip = document.querySelector('.year-chip.all');
-    if (selectedYears.has(year)) {
-      selectedYears.delete(year);
-      btn.classList.remove('active');
-    } else {
-      selectedYears.add(year);
-      btn.classList.add('active');
-      allChip.classList.remove('active');
-    }
-    if (selectedYears.size === 0) allChip.classList.add('active');
-    doSearch();
-  }
-
-  // 한글 자모 분리 유사 검색
-  function normalize(str) {
-    return str.toLowerCase().replace(/\s+/g, '');
-  }
+  function normalize(s) { return s.toLowerCase().replace(/\s+/g, ''); }
 
   function fuzzyMatch(text, keyword) {
     if (!keyword) return true;
-    const t = normalize(text);
-    const k = normalize(keyword);
-    // 공백 분리 복수 키워드 AND 검색
-    const terms = keyword.trim().split(/\s+/).map(normalize).filter(Boolean);
-    return terms.every(term => t.includes(term));
+    return keyword.trim().split(/\s+/).map(normalize).filter(Boolean)
+      .every(t => normalize(text).includes(t));
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   function highlight(text, keyword) {
     if (!keyword) return escHtml(text);
-    const terms = keyword.trim().split(/\s+/).filter(Boolean);
     let result = escHtml(text);
-    terms.forEach(term => {
-      const re = new RegExp(escRegex(term), 'gi');
-      result = result.replace(re, m => `<mark class="highlight">${m}</mark>`);
+    keyword.trim().split(/\s+/).filter(Boolean).forEach(term => {
+      result = result.replace(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi'),
+        m => `<mark class="highlight">${m}</mark>`);
     });
     return result;
   }
 
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-  function escRegex(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  function renderPagination(containerId, total, current, onPage) {
+    const el = document.getElementById(containerId);
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    const maxBtn = 7;
+    let s = Math.max(1, current - Math.floor(maxBtn/2));
+    let e = Math.min(totalPages, s + maxBtn - 1);
+    if (e - s < maxBtn - 1) s = Math.max(1, e - maxBtn + 1);
+    let html = `<button class="page-btn" onclick="${onPage}(${current-1})" ${current===1?'disabled':''}>&#8249;</button>`;
+    if (s > 1) html += `<button class="page-btn" onclick="${onPage}(1)">1</button>${s>2?'<span style="padding:0 4px;color:#a0aec0">…</span>':''}`;
+    for (let p = s; p <= e; p++)
+      html += `<button class="page-btn${p===current?' active':''}" onclick="${onPage}(${p})">${p}</button>`;
+    if (e < totalPages) html += `${e<totalPages-1?'<span style="padding:0 4px;color:#a0aec0">…</span>':''}<button class="page-btn" onclick="${onPage}(${totalPages})">${totalPages}</button>`;
+    html += `<button class="page-btn" onclick="${onPage}(${current+1})" ${current===totalPages?'disabled':''}>&#8250;</button>`;
+    el.innerHTML = html;
   }
 
-  function doSearch() {
-    const keyword = document.getElementById('keywordInput').value;
-    const category = document.getElementById('categoryFilter').value;
+  function buildYearChips(containerId, years, selectedSet, cssExtra, onToggle) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.className = `year-chip all ${cssExtra} active`;
+    allBtn.textContent = '전체';
+    allBtn.onclick = () => {
+      selectedSet.clear();
+      el.querySelectorAll('.year-chip').forEach(c => c.classList.remove('active'));
+      allBtn.classList.add('active');
+      onToggle();
+    };
+    el.appendChild(allBtn);
+    years.forEach(y => {
+      const btn = document.createElement('button');
+      btn.className = `year-chip ${cssExtra}`;
+      btn.textContent = y;
+      btn.onclick = () => {
+        if (selectedSet.has(y)) { selectedSet.delete(y); btn.classList.remove('active'); }
+        else { selectedSet.add(y); btn.classList.add('active'); allBtn.classList.remove('active'); }
+        if (selectedSet.size === 0) allBtn.classList.add('active');
+        onToggle();
+      };
+      el.appendChild(btn);
+    });
+  }
 
-    filtered = allData.filter(d => {
-      const yearOk = selectedYears.size === 0 || selectedYears.has(d.year);
-      const catOk = !category || d.category === category;
-      const kwOk = fuzzyMatch(d.filename, keyword);
-      return yearOk && catOk && kwOk;
+  /* ═══════════════════════════════════════
+     탭 전환
+  ═══════════════════════════════════════ */
+  let currentTab = 'report';
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.tab-btn.${tab}`).classList.add('active');
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(`${tab}Section`).classList.add('active');
+    document.getElementById('resultMeta').style.display = 'none';
+    document.getElementById('reportTableWrap').style.display = 'none';
+    document.getElementById('researchTableWrap').style.display = 'none';
+    if (tab === 'report') searchReport();
+    else searchResearch();
+  }
+
+  /* ═══════════════════════════════════════
+     수시보고서
+  ═══════════════════════════════════════ */
+  let reportData = [];
+  let reportFiltered = [];
+  let reportPage = 1;
+  let reportYears = new Set();
+
+  fetch('data/reports.json')
+    .then(r => r.json())
+    .then(data => {
+      reportData = data;
+      const years = [...new Set(data.map(d => d.year))].sort();
+      buildYearChips('reportYearChips', years, reportYears, '', searchReport);
+      searchReport();
     });
 
-    currentPage = 1;
-    renderTable();
+  function searchReport() {
+    const kw = document.getElementById('reportKeyword').value;
+    const cat = document.getElementById('reportCategory').value;
+    reportFiltered = reportData.filter(d =>
+      (reportYears.size === 0 || reportYears.has(d.year)) &&
+      (!cat || d.category === cat) &&
+      fuzzyMatch(d.filename, kw)
+    );
+    reportPage = 1;
+    renderReport();
   }
 
-  function doReset() {
-    document.getElementById('keywordInput').value = '';
-    document.getElementById('categoryFilter').value = '';
-    selectedYears.clear();
-    document.querySelectorAll('.year-chip').forEach(c => c.classList.remove('active'));
-    const allChip = document.querySelector('.year-chip.all');
+  function resetReport() {
+    document.getElementById('reportKeyword').value = '';
+    document.getElementById('reportCategory').value = '';
+    reportYears.clear();
+    document.querySelectorAll('#reportYearChips .year-chip').forEach(c => c.classList.remove('active'));
+    const allChip = document.querySelector('#reportYearChips .year-chip.all');
     if (allChip) allChip.classList.add('active');
-    doSearch();
+    searchReport();
   }
 
-  function renderTable() {
-    const keyword = document.getElementById('keywordInput').value;
-    const meta = document.getElementById('resultMeta');
-    const wrap = document.getElementById('tableWrap');
-    const tbody = document.getElementById('tableBody');
-    const pagination = document.getElementById('pagination');
+  function goReportPage(p) {
+    const total = Math.ceil(reportFiltered.length / PAGE_SIZE);
+    if (p < 1 || p > total) return;
+    reportPage = p;
+    renderReport();
+    document.getElementById('reportTableWrap').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
 
-    const total = filtered.length;
+  function renderReport() {
+    if (currentTab !== 'report') return;
+    const kw = document.getElementById('reportKeyword').value;
+    const total = reportFiltered.length;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    currentPage = Math.min(currentPage, totalPages);
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const pageData = filtered.slice(start, start + PAGE_SIZE);
+    reportPage = Math.min(reportPage, totalPages);
+    const start = (reportPage - 1) * PAGE_SIZE;
+    const pageData = reportFiltered.slice(start, start + PAGE_SIZE);
 
-    meta.style.display = 'flex';
-    meta.innerHTML = `검색 결과 <strong style="margin:0 4px;">${total.toLocaleString()}</strong>건 &nbsp;|&nbsp; 페이지 ${currentPage} / ${totalPages}`;
-
-    wrap.style.display = '';
+    document.getElementById('resultMeta').style.display = 'flex';
+    document.getElementById('resultMeta').innerHTML =
+      `검색 결과 <strong style="margin:0 4px;">${total.toLocaleString()}</strong>건 &nbsp;|&nbsp; 페이지 ${reportPage} / ${totalPages}`;
+    document.getElementById('reportTableWrap').style.display = '';
+    document.getElementById('researchTableWrap').style.display = 'none';
 
     if (total === 0) {
-      tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-        </svg>
-        <p>검색 결과가 없습니다.</p>
-      </div></td></tr>`;
-      pagination.innerHTML = '';
+      document.getElementById('reportBody').innerHTML =
+        '<tr><td colspan="4"><div class="empty-state"><p>검색 결과가 없습니다.</p></div></td></tr>';
+      document.getElementById('reportPagination').innerHTML = '';
       return;
     }
 
-    let rows = '';
-    pageData.forEach((d, i) => {
-      const badgeClass = `badge badge-${d.category}`;
-      rows += `<tr>
+    document.getElementById('reportBody').innerHTML = pageData.map((d, i) => `
+      <tr>
         <td>${start + i + 1}</td>
         <td>${d.year}</td>
-        <td><span class="${badgeClass}">${d.category}</span></td>
-        <td>${highlight(d.filename, keyword)}</td>
-      </tr>`;
-    });
-    tbody.innerHTML = rows;
+        <td><span class="badge badge-${d.category}">${d.category}</span></td>
+        <td>${highlight(d.filename, kw)}</td>
+      </tr>`).join('');
 
-    // 페이지네이션
-    renderPagination(totalPages);
+    renderPagination('reportPagination', total, reportPage, 'goReportPage');
   }
 
-  function renderPagination(totalPages) {
-    const pagination = document.getElementById('pagination');
-    if (totalPages <= 1) { pagination.innerHTML = ''; return; }
-
-    let html = '';
-    const maxBtn = 7;
-    let startP = Math.max(1, currentPage - Math.floor(maxBtn / 2));
-    let endP = Math.min(totalPages, startP + maxBtn - 1);
-    if (endP - startP < maxBtn - 1) startP = Math.max(1, endP - maxBtn + 1);
-
-    html += `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>&#8249;</button>`;
-    if (startP > 1) html += `<button class="page-btn" onclick="goPage(1)">1</button>${startP>2?'<span style="padding:0 4px;color:#a0aec0">…</span>':''}`;
-    for (let p = startP; p <= endP; p++) {
-      html += `<button class="page-btn${p===currentPage?' active':''}" onclick="goPage(${p})">${p}</button>`;
-    }
-    if (endP < totalPages) html += `${endP<totalPages-1?'<span style="padding:0 4px;color:#a0aec0">…</span>':''}<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
-    html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>&#8250;</button>`;
-
-    pagination.innerHTML = html;
-  }
-
-  function goPage(p) {
-    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-    if (p < 1 || p > totalPages) return;
-    currentPage = p;
-    renderTable();
-    document.querySelector('.table-wrap, #tableWrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  // Enter 키 검색
-  document.getElementById('keywordInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doSearch();
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('reportKeyword').addEventListener('input', searchReport);
+    document.getElementById('reportCategory').addEventListener('change', searchReport);
+    document.getElementById('reportKeyword').addEventListener('keydown', e => { if(e.key==='Enter') searchReport(); });
   });
-  // 실시간 검색
-  document.getElementById('keywordInput').addEventListener('input', () => doSearch());
-  document.getElementById('categoryFilter').addEventListener('change', () => doSearch());
+
+  /* ═══════════════════════════════════════
+     연구용역
+  ═══════════════════════════════════════ */
+  let researchData = [];
+  let researchFiltered = [];
+  let researchPage = 1;
+  let researchYears = new Set();
+
+  fetch('data/research.json')
+    .then(r => r.json())
+    .then(data => {
+      researchData = data;
+      const years = [...new Set(data.map(d => d.year))].sort();
+      buildYearChips('researchYearChips', years, researchYears, 'green-chip', searchResearch);
+      // 발주처 드롭다운
+      const clients = [...new Set(data.map(d => d.client))].sort();
+      const sel = document.getElementById('researchClient');
+      clients.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.textContent = c;
+        sel.appendChild(opt);
+      });
+      document.getElementById('researchKeyword').addEventListener('input', searchResearch);
+      document.getElementById('researchClient').addEventListener('change', searchResearch);
+      document.getElementById('researchKeyword').addEventListener('keydown', e => { if(e.key==='Enter') searchResearch(); });
+    });
+
+  function searchResearch() {
+    const kw = document.getElementById('researchKeyword').value;
+    const client = document.getElementById('researchClient').value;
+    researchFiltered = researchData.filter(d =>
+      (researchYears.size === 0 || researchYears.has(d.year)) &&
+      (!client || d.client === client) &&
+      fuzzyMatch(d.title, kw)
+    );
+    researchPage = 1;
+    renderResearch();
+  }
+
+  function resetResearch() {
+    document.getElementById('researchKeyword').value = '';
+    document.getElementById('researchClient').value = '';
+    researchYears.clear();
+    document.querySelectorAll('#researchYearChips .year-chip').forEach(c => c.classList.remove('active'));
+    const allChip = document.querySelector('#researchYearChips .year-chip.all');
+    if (allChip) allChip.classList.add('active');
+    searchResearch();
+  }
+
+  function goResearchPage(p) {
+    const total = Math.ceil(researchFiltered.length / PAGE_SIZE);
+    if (p < 1 || p > total) return;
+    researchPage = p;
+    renderResearch();
+    document.getElementById('researchTableWrap').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  function renderResearch() {
+    if (currentTab !== 'research') return;
+    const kw = document.getElementById('researchKeyword').value;
+    const total = researchFiltered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    researchPage = Math.min(researchPage, totalPages);
+    const start = (researchPage - 1) * PAGE_SIZE;
+    const pageData = researchFiltered.slice(start, start + PAGE_SIZE);
+
+    document.getElementById('resultMeta').style.display = 'flex';
+    document.getElementById('resultMeta').innerHTML =
+      `검색 결과 <strong style="margin:0 4px;">${total.toLocaleString()}</strong>건 &nbsp;|&nbsp; 페이지 ${researchPage} / ${totalPages}`;
+    document.getElementById('reportTableWrap').style.display = 'none';
+    document.getElementById('researchTableWrap').style.display = '';
+
+    if (total === 0) {
+      document.getElementById('researchBody').innerHTML =
+        '<tr><td colspan="4"><div class="empty-state"><p>검색 결과가 없습니다.</p></div></td></tr>';
+      document.getElementById('researchPagination').innerHTML = '';
+      return;
+    }
+
+    document.getElementById('researchBody').innerHTML = pageData.map((d, i) => `
+      <tr>
+        <td>${start + i + 1}</td>
+        <td>${escHtml(d.year)}</td>
+        <td>${highlight(d.client, kw)}</td>
+        <td>${highlight(d.title, kw)}</td>
+      </tr>`).join('');
+
+    renderPagination('researchPagination', total, researchPage, 'goResearchPage');
+  }
 </script>
 
 </body>
