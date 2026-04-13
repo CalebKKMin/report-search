@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>수시보고서 리스트 검색 시스템</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a3a5c 0%, #2563a8 100%);
+      color: white;
+      padding: 28px 24px 22px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+    header h1 {
+      font-size: 1.7rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    header p {
+      margin-top: 6px;
+      font-size: 0.88rem;
+      opacity: 0.82;
+    }
+
+    .search-panel {
+      max-width: 1000px;
+      margin: 28px auto 0;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+      padding: 24px 28px;
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .filter-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #4a5568;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .filter-group select,
+    .filter-group input {
+      border: 1.5px solid #cbd5e0;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 0.93rem;
+      font-family: inherit;
+      background: #f7fafc;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .filter-group select:focus,
+    .filter-group input:focus {
+      border-color: #2563a8;
+      background: white;
+    }
+
+    .filter-group.keyword { flex: 1; min-width: 220px; }
+    .filter-group.keyword input { width: 100%; }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      align-items: center;
+    }
+    button {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.93rem;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:active { transform: scale(0.97); }
+    .btn-search {
+      background: #2563a8;
+      color: white;
+    }
+    .btn-search:hover { background: #1a4a8a; }
+    .btn-reset {
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+    .btn-reset:hover { background: #cbd5e0; }
+
+    .result-meta {
+      max-width: 1000px;
+      margin: 16px auto 8px;
+      padding: 0 4px;
+      font-size: 0.88rem;
+      color: #718096;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .result-meta strong { color: #2d3748; }
+
+    .table-wrap {
+      max-width: 1000px;
+      margin: 0 auto 40px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead tr {
+      background: #1a3a5c;
+      color: white;
+    }
+    thead th {
+      padding: 13px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.85rem;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    thead th:nth-child(1) { width: 70px; text-align: center; }
+    thead th:nth-child(2) { width: 70px; text-align: center; }
+    thead th:nth-child(3) { width: 80px; text-align: center; }
+    thead th:nth-child(4) { }
+
+    tbody tr {
+      border-bottom: 1px solid #edf2f7;
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: #ebf4ff; }
+    tbody tr:last-child { border-bottom: none; }
+
+    td {
+      padding: 11px 16px;
+      color: #2d3748;
+      vertical-align: middle;
+    }
+    td:nth-child(1) { text-align: center; color: #718096; font-size: 0.82rem; }
+    td:nth-child(2) { text-align: center; font-weight: 600; color: #2563a8; }
+    td:nth-child(3) { text-align: center; }
+    td:nth-child(4) { word-break: break-all; line-height: 1.5; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .badge-국가 { background: #dbeafe; color: #1d4ed8; }
+    .badge-산업 { background: #dcfce7; color: #15803d; }
+    .badge-기타 { background: #fef9c3; color: #854d0e; }
+
+    .highlight {
+      background: #fef08a;
+      border-radius: 2px;
+      font-weight: 600;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #a0aec0;
+    }
+    .empty-state svg {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+    .empty-state p { font-size: 1rem; }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      padding: 16px;
+      border-top: 1px solid #edf2f7;
+    }
+    .page-btn {
+      padding: 6px 12px;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 6px;
+      background: white;
+      color: #4a5568;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .page-btn:hover { border-color: #2563a8; color: #2563a8; }
+    .page-btn.active { background: #2563a8; border-color: #2563a8; color: white; font-weight: 700; }
+    .page-btn:disabled { opacity: 0.4; cursor: default; }
+
+    .year-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .year-chip {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1.5px solid #cbd5e0;
+      background: white;
+      color: #4a5568;
+      font-size: 0.83rem;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .year-chip:hover { border-color: #2563a8; color: #2563a8; }
+    .year-chip.active { background: #2563a8; border-color: #2563a8; color: white; font-weight: 700; }
+    .year-chip.all { background: #f0f4f8; }
+
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.25rem; }
+      .search-panel { margin: 14px 10px 0; padding: 16px; }
+      .filter-row { flex-direction: column; }
+      thead th:nth-child(1), td:nth-child(1) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>수시보고서 리스트 검색 시스템</h1>
+  <p>2019~2026년 수시보고서 통합 검색</p>
+</header>
+
+<div class="search-panel">
+  <!-- 연도 칩 -->
+  <div style="margin-bottom:16px;">
+    <div style="font-size:0.8rem;font-weight:600;color:#4a5568;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">연도</div>
+    <div class="year-chips" id="yearChips"></div>
+  </div>
+
+  <div class="filter-row">
+    <!-- 분류 -->
+    <div class="filter-group">
+      <label>분류</label>
+      <select id="categoryFilter">
+        <option value="">전체</option>
+        <option value="국가">국가</option>
+        <option value="산업">산업</option>
+        <option value="기타">기타</option>
+      </select>
+    </div>
+
+    <!-- 키워드 검색 -->
+    <div class="filter-group keyword">
+      <label>파일명 검색 (일부 단어 입력)</label>
+      <input type="text" id="keywordInput" placeholder="예: FDI, 미중, 반도체, 투자..." autocomplete="off" />
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-search" onclick="doSearch()">검색</button>
+    <button class="btn-reset" onclick="doReset()">초기화</button>
+    <span id="searchHint" style="font-size:0.82rem;color:#718096;margin-left:4px;"></span>
+  </div>
+</div>
+
+<div class="result-meta" id="resultMeta" style="display:none;"></div>
+
+<div class="table-wrap" id="tableWrap" style="display:none;">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>연도</th>
+        <th>분류</th>
+        <th>파일명</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+  let allData = [];
+  let filtered = [];
+  let selectedYears = new Set();
+  const PAGE_SIZE = 30;
+  let currentPage = 1;
+
+  // 데이터 로드
+  fetch('data/reports.json')
+    .then(r => r.json())
+    .then(data => {
+      allData = data;
+      initYearChips();
+      doSearch();
+    })
+    .catch(err => {
+      document.getElementById('tableWrap').style.display = '';
+      document.getElementById('tableBody').innerHTML =
+        '<tr><td colspan="4" style="text-align:center;padding:40px;color:#e53e3e;">데이터를 불러오지 못했습니다: ' + err.message + '</td></tr>';
+    });
+
+  function initYearChips() {
+    const years = [...new Set(allData.map(d => d.year))].sort();
+    const container = document.getElementById('yearChips');
+    // 전체 칩
+    const all = document.createElement('button');
+    all.className = 'year-chip all active';
+    all.textContent = '전체';
+    all.dataset.year = '';
+    all.onclick = () => {
+      selectedYears.clear();
+      document.querySelectorAll('.year-chip').forEach(c => c.classList.remove('active'));
+      all.classList.add('active');
+      doSearch();
+    };
+    container.appendChild(all);
+
+    years.forEach(y => {
+      const btn = document.createElement('button');
+      btn.className = 'year-chip';
+      btn.textContent = y + '년';
+      btn.dataset.year = y;
+      btn.onclick = () => toggleYear(y, btn);
+      container.appendChild(btn);
+    });
+  }
+
+  function toggleYear(year, btn) {
+    const allChip = document.querySelector('.year-chip.all');
+    if (selectedYears.has(year)) {
+      selectedYears.delete(year);
+      btn.classList.remove('active');
+    } else {
+      selectedYears.add(year);
+      btn.classList.add('active');
+      allChip.classList.remove('active');
+    }
+    if (selectedYears.size === 0) allChip.classList.add('active');
+    doSearch();
+  }
+
+  // 한글 자모 분리 유사 검색
+  function normalize(str) {
+    return str.toLowerCase().replace(/\s+/g, '');
+  }
+
+  function fuzzyMatch(text, keyword) {
+    if (!keyword) return true;
+    const t = normalize(text);
+    const k = normalize(keyword);
+    // 공백 분리 복수 키워드 AND 검색
+    const terms = keyword.trim().split(/\s+/).map(normalize).filter(Boolean);
+    return terms.every(term => t.includes(term));
+  }
+
+  function highlight(text, keyword) {
+    if (!keyword) return escHtml(text);
+    const terms = keyword.trim().split(/\s+/).filter(Boolean);
+    let result = escHtml(text);
+    terms.forEach(term => {
+      const re = new RegExp(escRegex(term), 'gi');
+      result = result.replace(re, m => `<mark class="highlight">${m}</mark>`);
+    });
+    return result;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function escRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function doSearch() {
+    const keyword = document.getElementById('keywordInput').value;
+    const category = document.getElementById('categoryFilter').value;
+
+    filtered = allData.filter(d => {
+      const yearOk = selectedYears.size === 0 || selectedYears.has(d.year);
+      const catOk = !category || d.category === category;
+      const kwOk = fuzzyMatch(d.filename, keyword);
+      return yearOk && catOk && kwOk;
+    });
+
+    currentPage = 1;
+    renderTable();
+  }
+
+  function doReset() {
+    document.getElementById('keywordInput').value = '';
+    document.getElementById('categoryFilter').value = '';
+    selectedYears.clear();
+    document.querySelectorAll('.year-chip').forEach(c => c.classList.remove('active'));
+    const allChip = document.querySelector('.year-chip.all');
+    if (allChip) allChip.classList.add('active');
+    doSearch();
+  }
+
+  function renderTable() {
+    const keyword = document.getElementById('keywordInput').value;
+    const meta = document.getElementById('resultMeta');
+    const wrap = document.getElementById('tableWrap');
+    const tbody = document.getElementById('tableBody');
+    const pagination = document.getElementById('pagination');
+
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    currentPage = Math.min(currentPage, totalPages);
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageData = filtered.slice(start, start + PAGE_SIZE);
+
+    meta.style.display = 'flex';
+    meta.innerHTML = `검색 결과 <strong style="margin:0 4px;">${total.toLocaleString()}</strong>건 &nbsp;|&nbsp; 페이지 ${currentPage} / ${totalPages}`;
+
+    wrap.style.display = '';
+
+    if (total === 0) {
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <p>검색 결과가 없습니다.</p>
+      </div></td></tr>`;
+      pagination.innerHTML = '';
+      return;
+    }
+
+    let rows = '';
+    pageData.forEach((d, i) => {
+      const badgeClass = `badge badge-${d.category}`;
+      rows += `<tr>
+        <td>${start + i + 1}</td>
+        <td>${d.year}</td>
+        <td><span class="${badgeClass}">${d.category}</span></td>
+        <td>${highlight(d.filename, keyword)}</td>
+      </tr>`;
+    });
+    tbody.innerHTML = rows;
+
+    // 페이지네이션
+    renderPagination(totalPages);
+  }
+
+  function renderPagination(totalPages) {
+    const pagination = document.getElementById('pagination');
+    if (totalPages <= 1) { pagination.innerHTML = ''; return; }
+
+    let html = '';
+    const maxBtn = 7;
+    let startP = Math.max(1, currentPage - Math.floor(maxBtn / 2));
+    let endP = Math.min(totalPages, startP + maxBtn - 1);
+    if (endP - startP < maxBtn - 1) startP = Math.max(1, endP - maxBtn + 1);
+
+    html += `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>&#8249;</button>`;
+    if (startP > 1) html += `<button class="page-btn" onclick="goPage(1)">1</button>${startP>2?'<span style="padding:0 4px;color:#a0aec0">…</span>':''}`;
+    for (let p = startP; p <= endP; p++) {
+      html += `<button class="page-btn${p===currentPage?' active':''}" onclick="goPage(${p})">${p}</button>`;
+    }
+    if (endP < totalPages) html += `${endP<totalPages-1?'<span style="padding:0 4px;color:#a0aec0">…</span>':''}<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
+    html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>&#8250;</button>`;
+
+    pagination.innerHTML = html;
+  }
+
+  function goPage(p) {
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    if (p < 1 || p > totalPages) return;
+    currentPage = p;
+    renderTable();
+    document.querySelector('.table-wrap, #tableWrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Enter 키 검색
+  document.getElementById('keywordInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+  // 실시간 검색
+  document.getElementById('keywordInput').addEventListener('input', () => doSearch());
+  document.getElementById('categoryFilter').addEventListener('change', () => doSearch());
+</script>
+
+</body>
+</html>
