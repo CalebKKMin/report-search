@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>수시보고서-연구용역 리스트 검색 시스템</title>
+
+  <!-- Google API -->
+  <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+  <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -198,6 +203,19 @@
 
     .highlight { background: #fef08a; border-radius: 2px; font-weight: 600; }
 
+    /* ── 파일명 링크 ── */
+    .file-link {
+      color: #2563a8;
+      text-decoration: none;
+      cursor: pointer;
+      border-bottom: 1px dashed #93c5fd;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .file-link:hover {
+      color: #1a4a8a;
+      border-bottom-color: #2563a8;
+    }
+
     .empty-state { text-align: center; padding: 60px 20px; color: #a0aec0; }
     .empty-state p { font-size: 1rem; }
 
@@ -208,10 +226,132 @@
     .page-btn.active { background: #2563a8; border-color: #2563a8; color: white; font-weight: 700; }
     .page-btn:disabled { opacity: 0.4; cursor: default; }
 
+    /* ── Google Drive 모달 ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: white;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 860px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 22px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+    .modal-header-title {
+      font-size: 0.93rem;
+      font-weight: 700;
+      color: #1a3a5c;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: calc(100% - 60px);
+    }
+    .modal-close-btn {
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      color: #718096;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .modal-close-btn:hover { background: #e2e8f0; color: #2d3748; }
+    .modal-body {
+      flex: 1;
+      overflow: auto;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-body iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+      min-height: 480px;
+    }
+    .modal-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 50px 30px;
+      gap: 18px;
+      text-align: center;
+      flex: 1;
+    }
+    .modal-center p { color: #4a5568; font-size: 0.95rem; line-height: 1.6; }
+    .modal-center .sub { color: #a0aec0; font-size: 0.83rem; }
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 22px;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+    .btn-gdrive {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-decoration: none;
+    }
+    .btn-gdrive.download { background: #2563a8; color: white; }
+    .btn-gdrive.download:hover { background: #1a4a8a; }
+    .btn-gdrive.open { background: #e8f0fb; color: #2563a8; border: 1.5px solid #bfdbfe; }
+    .btn-gdrive.open:hover { background: #dbeafe; }
+    .btn-gdrive.signin { background: #2563a8; color: white; padding: 12px 28px; font-size: 0.95rem; }
+    .btn-gdrive.signin:hover { background: #1a4a8a; }
+    .btn-gdrive:disabled { opacity: 0.5; cursor: default; }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #2563a8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .modal-error-icon { font-size: 2.5rem; }
+    .modal-auth-icon { font-size: 2.8rem; }
+
     @media (max-width: 640px) {
       header h1 { font-size: 1.2rem; }
       .search-panel { padding: 16px; }
       .filter-row { flex-direction: column; }
+      .modal-body iframe { min-height: 300px; }
     }
   </style>
 </head>
@@ -292,7 +432,7 @@
 <div class="table-wrap" id="reportTableWrap" style="display:none;">
   <table id="reportTable">
     <thead>
-      <tr><th>#</th><th>연도</th><th>분류</th><th>파일명</th></tr>
+      <tr><th>#</th><th>연도</th><th>분류</th><th>파일명 (클릭하여 열기)</th></tr>
     </thead>
     <tbody id="reportBody"></tbody>
   </table>
@@ -310,7 +450,331 @@
   <div class="pagination" id="researchPagination"></div>
 </div>
 
+<!-- ══════════════════════════════════════
+     Google Drive 파일 뷰어 모달
+══════════════════════════════════════ -->
+<div id="driveModal" class="modal-overlay" style="display:none;" onclick="onModalOverlayClick(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-header-title" id="modalTitle">파일 보기</div>
+      <button class="modal-close-btn" onclick="closeModal()" title="닫기">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <div class="modal-center">
+        <div class="spinner"></div>
+        <p>로딩 중...</p>
+      </div>
+    </div>
+    <div class="modal-footer" id="modalFooter" style="display:none;">
+      <button class="btn-gdrive download" id="modalDownloadBtn" onclick="downloadCurrentFile()">
+        ⬇ 다운로드
+      </button>
+      <a class="btn-gdrive open" id="modalOpenBtn" href="#" target="_blank" rel="noopener">
+        ↗ 드라이브에서 열기
+      </a>
+    </div>
+  </div>
+</div>
+
 <script>
+  /* ═══════════════════════════════════════
+     ★ Google Drive 설정
+     아래 두 값을 Google Cloud Console에서 발급받아 입력하세요.
+     설정 방법: README 또는 아래 주석 참고
+  ═══════════════════════════════════════ */
+  const GDRIVE_CLIENT_ID = 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com';
+  // API 키는 선택사항이지만 할당량 관리를 위해 권장합니다
+  const GDRIVE_API_KEY   = 'YOUR_API_KEY';
+  const GDRIVE_SCOPES    = 'https://www.googleapis.com/auth/drive.readonly';
+
+  /* ═══════════════════════════════════════
+     Google API 초기화
+  ═══════════════════════════════════════ */
+  let gapiInited = false;
+  let gisInited  = false;
+  let tokenClient = null;
+  let currentFileId = null;
+  let currentFileName = '';
+  let pendingFile = null; // { filename, year }
+
+  function gapiLoaded() {
+    gapi.load('client', async () => {
+      try {
+        await gapi.client.init({
+          apiKey: GDRIVE_API_KEY !== 'YOUR_API_KEY' ? GDRIVE_API_KEY : undefined,
+          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+        });
+        gapiInited = true;
+      } catch (e) {
+        console.warn('GAPI init error:', e);
+      }
+    });
+  }
+
+  function gisLoaded() {
+    if (GDRIVE_CLIENT_ID === 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com') return;
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID,
+      scope: GDRIVE_SCOPES,
+      callback: (resp) => {
+        if (resp.error) {
+          showModalError('Google 인증에 실패했습니다.<br><small>' + resp.error + '</small>');
+          return;
+        }
+        if (pendingFile) {
+          searchAndOpenFile(pendingFile.filename, pendingFile.year);
+          pendingFile = null;
+        }
+      },
+    });
+    gisInited = true;
+  }
+
+  /* ═══════════════════════════════════════
+     모달 제어
+  ═══════════════════════════════════════ */
+  function showModal(title) {
+    currentFileId = null;
+    currentFileName = title;
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalFooter').style.display = 'none';
+    document.getElementById('driveModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('driveModal').style.display = 'none';
+    document.body.style.overflow = '';
+    // iframe 제거 (메모리 해제)
+    const body = document.getElementById('modalBody');
+    body.innerHTML = '';
+  }
+
+  function onModalOverlayClick(e) {
+    if (e.target === document.getElementById('driveModal')) closeModal();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  function showModalLoading() {
+    document.getElementById('modalBody').innerHTML = `
+      <div class="modal-center">
+        <div class="spinner"></div>
+        <p>Google Drive에서 파일을 검색 중입니다…</p>
+      </div>`;
+    document.getElementById('modalFooter').style.display = 'none';
+  }
+
+  function showModalError(msg) {
+    document.getElementById('modalBody').innerHTML = `
+      <div class="modal-center">
+        <div class="modal-error-icon">⚠️</div>
+        <p>${msg}</p>
+        <p class="sub">파일명이 Google Drive와 다르거나 접근 권한이 없을 수 있습니다.</p>
+      </div>`;
+    document.getElementById('modalFooter').style.display = 'none';
+  }
+
+  function showModalContent(html) {
+    document.getElementById('modalBody').innerHTML = html;
+  }
+
+  /* ═══════════════════════════════════════
+     파일명 클릭 핸들러
+  ═══════════════════════════════════════ */
+  function onFilenameClick(event, filename, year) {
+    event.preventDefault();
+    showModal(filename);
+
+    // 설정 미완료 시 안내
+    if (GDRIVE_CLIENT_ID === 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com') {
+      showModalContent(`
+        <div class="modal-center">
+          <div class="modal-auth-icon">⚙️</div>
+          <p><strong>Google Drive 연동 설정이 필요합니다.</strong></p>
+          <p class="sub">
+            index.html 상단의 <code>GDRIVE_CLIENT_ID</code>와 <code>GDRIVE_API_KEY</code>를<br>
+            Google Cloud Console에서 발급받아 입력해 주세요.
+          </p>
+        </div>`);
+      return;
+    }
+
+    pendingFile = { filename, year };
+
+    // GAPI / GIS 아직 로딩 중인 경우
+    if (!gapiInited || !gisInited) {
+      showModalContent(`
+        <div class="modal-center">
+          <div class="spinner"></div>
+          <p>Google API 초기화 중…</p>
+        </div>`);
+      // 준비되면 자동 재시도
+      const wait = setInterval(() => {
+        if (gapiInited && gisInited) {
+          clearInterval(wait);
+          triggerAuth();
+        }
+      }, 200);
+      return;
+    }
+
+    triggerAuth();
+  }
+
+  function triggerAuth() {
+    const token = gapi.client.getToken();
+    if (token === null) {
+      // 로그인 필요
+      showModalContent(`
+        <div class="modal-center">
+          <div class="modal-auth-icon">🔐</div>
+          <p>파일을 열려면 Google 계정 인증이 필요합니다.<br>
+             <span class="sub">kkmin2008@gmail.com 계정으로 로그인하세요.</span></p>
+          <button class="btn-gdrive signin" onclick="requestGoogleAuth()">
+            Google 계정으로 로그인
+          </button>
+        </div>`);
+    } else {
+      if (pendingFile) {
+        searchAndOpenFile(pendingFile.filename, pendingFile.year);
+        pendingFile = null;
+      }
+    }
+  }
+
+  function requestGoogleAuth() {
+    if (!tokenClient) return;
+    tokenClient.requestAccessToken({ prompt: '' });
+  }
+
+  /* ═══════════════════════════════════════
+     Google Drive 파일 검색
+  ═══════════════════════════════════════ */
+  async function searchAndOpenFile(filename, year) {
+    showModalLoading();
+
+    try {
+      // 1단계: 정확한 이름으로 검색
+      let file = await findFileByName(filename);
+
+      // 2단계: 이름에 포함된 핵심 키 부분으로 재검색 (확장자 차이 등 대응)
+      if (!file) {
+        // 예: "#19수시보고_001_..." → 앞 30자로 검색
+        const shortName = filename.replace(/'/g, "\\'").substring(0, 40);
+        file = await findFileByPartialName(shortName, year);
+      }
+
+      if (!file) {
+        showModalError(`<strong>"${escHtml(filename)}"</strong> 파일을 Google Drive에서 찾을 수 없습니다.`);
+        return;
+      }
+
+      openFileInModal(file);
+    } catch (err) {
+      if (err.status === 401) {
+        // 토큰 만료 → 재인증
+        pendingFile = { filename, year };
+        tokenClient.requestAccessToken({ prompt: '' });
+      } else {
+        console.error(err);
+        showModalError('파일 검색 중 오류가 발생했습니다.<br><small>' + (err.message || err) + '</small>');
+      }
+    }
+  }
+
+  async function findFileByName(filename) {
+    const q = `name = '${filename.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' and trashed = false and mimeType != 'application/vnd.google-apps.folder'`;
+    const res = await gapi.client.drive.files.list({
+      q,
+      fields: 'files(id, name, mimeType, webViewLink)',
+      pageSize: 5,
+      spaces: 'drive',
+    });
+    return res.result.files && res.result.files.length > 0 ? res.result.files[0] : null;
+  }
+
+  async function findFileByPartialName(partialName, year) {
+    // 연도 폴더 안에서 먼저 검색, 없으면 전체 검색
+    const q = `name contains '${partialName}' and trashed = false and mimeType != 'application/vnd.google-apps.folder'`;
+    const res = await gapi.client.drive.files.list({
+      q,
+      fields: 'files(id, name, mimeType, webViewLink, parents)',
+      pageSize: 10,
+      spaces: 'drive',
+    });
+    if (!res.result.files || res.result.files.length === 0) return null;
+
+    // 여러 결과가 있으면 파일명이 가장 비슷한 것 반환
+    return res.result.files[0];
+  }
+
+  /* ═══════════════════════════════════════
+     모달에 파일 표시
+  ═══════════════════════════════════════ */
+  function openFileInModal(file) {
+    currentFileId = file.id;
+    const viewLink = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+    const previewUrl = `https://drive.google.com/file/d/${file.id}/preview`;
+
+    document.getElementById('modalBody').innerHTML =
+      `<iframe src="${previewUrl}" allowfullscreen></iframe>`;
+
+    const openBtn = document.getElementById('modalOpenBtn');
+    openBtn.href = viewLink;
+
+    document.getElementById('modalFooter').style.display = 'flex';
+  }
+
+  /* ═══════════════════════════════════════
+     다운로드
+  ═══════════════════════════════════════ */
+  async function downloadCurrentFile() {
+    if (!currentFileId) return;
+
+    const token = gapi.client.getToken();
+    if (!token) { requestGoogleAuth(); return; }
+
+    const btn = document.getElementById('modalDownloadBtn');
+    btn.disabled = true;
+    btn.textContent = '⬇ 다운로드 중…';
+
+    try {
+      const downloadUrl =
+        `https://www.googleapis.com/drive/v3/files/${currentFileId}?alt=media`;
+
+      const response = await fetch(downloadUrl, {
+        headers: { Authorization: `Bearer ${token.access_token}` },
+      });
+
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+
+      const blob = await response.blob();
+      const contentDisp = response.headers.get('content-disposition') || '';
+      let fname = currentFileName;
+      const m = contentDisp.match(/filename\*?=(?:UTF-8'')?([^;]+)/i);
+      if (m) fname = decodeURIComponent(m[1].replace(/"/g, ''));
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (err) {
+      console.error('Download error:', err);
+      // 폴백: 드라이브에서 직접 열기
+      window.open(`https://drive.google.com/uc?export=download&id=${currentFileId}`, '_blank');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⬇ 다운로드';
+    }
+  }
+
   /* ═══════════════════════════════════════
      공통 유틸
   ═══════════════════════════════════════ */
@@ -469,13 +933,24 @@
       return;
     }
 
-    document.getElementById('reportBody').innerHTML = pageData.map((d, i) => `
+    document.getElementById('reportBody').innerHTML = pageData.map((d, i) => {
+      // 파일명에 포함된 작은따옴표를 이스케이프 (onclick 인자)
+      const safeFilename = d.filename.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const safeYear = d.year.replace(/'/g, "\\'");
+      return `
       <tr>
         <td>${start + i + 1}</td>
         <td>${d.year}</td>
         <td><span class="badge badge-${d.category}">${d.category}</span></td>
-        <td>${highlight(d.filename, kw)}</td>
-      </tr>`).join('');
+        <td>
+          <a href="#" class="file-link"
+             onclick="onFilenameClick(event,'${safeFilename}','${safeYear}')"
+             title="클릭하여 Google Drive에서 파일 열기">
+            ${highlight(d.filename, kw)}
+          </a>
+        </td>
+      </tr>`;
+    }).join('');
 
     renderPagination('reportPagination', total, reportPage, 'goReportPage');
   }
